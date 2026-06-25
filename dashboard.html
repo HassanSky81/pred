@@ -1,4 +1,25 @@
-<script type="module"> 
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+</head>
+<body>
+
+  <h1>🏆 Bine ai venit la pronosticuri!</h1>
+  <p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
+
+  <h3>🔍 Caută meciurile dintr-o grupă</h3>
+  
+  <label for="groupInput">Introdu litera grupei (A-L):</label>
+  <input type="text" id="groupInput" placeholder="Ex: A" maxlength="1" style="text-transform: uppercase; width: 50px; text-align: center;">
+  
+  <button id="showMatchesBtn">Afișează meciuri</button>
+  
+  <div id="meciuriContainer" style="margin-top: 20px;"></div>
+
+  <button id="genBtn" style="display: none; margin-top: 20px; background-color: #4CAF50; color: white; padding: 10px; border: none; cursor: pointer;">Generate All Matches</button>
+
+  <script type="module"> 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
@@ -124,3 +145,5 @@
       }
     });
   </script>
+</body>
+</html>
