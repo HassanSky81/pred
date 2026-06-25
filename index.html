@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login Pronosticuri</title>
+</head>
+<body>
+
+<h2>Login</h2>
+
+<input id="user" placeholder="User"><br><br>
+<input id="pass" type="password" placeholder="Parola"><br><br>
+
+<button onclick="login()">Login</button>
+
+<p id="msg"></p>
+
+<script>
+  // 🔵 AICI pui utilizatorii tăi
+  const users = {
+    "ion": "1234",
+    "maria": "abcd",
+    "george": "test"
+  };
+
+  function login() {
+    let u = document.getElementById("user").value;
+    let p = document.getElementById("pass").value;
+
+    if (users[u] && users[u] === p) {
+      localStorage.setItem("user", u);
+      window.location.href = "dashboard.html";
+    } else {
+      document.getElementById("msg").innerText = "User sau parola gresita";
+    }
+  }
+</script>
+
+</body>
+</html>
