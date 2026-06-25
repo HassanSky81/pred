@@ -68,7 +68,8 @@ const firebaseConfig = {
       // salvăm user în Firestore
       await setDoc(doc(db, "users", userCred.user.uid), {
         email: email,
-        points: 0
+        points: 0,
+		role: user
       });
 
       document.getElementById("msg").innerText = "Cont creat!";
