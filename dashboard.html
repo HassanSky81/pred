@@ -7,197 +7,152 @@
 
   <h1>🏆 Bine ai venit la pronosticuri!</h1>
   <p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
+
   <h3>🔍 Caută meciurile dintr-o grupă</h3>
-  
   <label for="groupInput">Introdu litera grupei (A-L):</label>
   <input type="text" id="groupInput" placeholder="Ex: A" maxlength="1" style="text-transform: uppercase; width: 50px; text-align: center;">
   
   <button id="showMatchesBtn">Afișează meciuri</button>
-
   <div id="meciuriContainer" style="margin-top: 20px;"></div>
 
-  <!-- 1. BUTONUL LIPSEA DIN HTML. Îl punem aici și îl ascundem implicit cu style="display: none;" -->
-  <button id="genBtn" style="display: none;">Generate</button>
+  <button id="genBtn" style="display: none; margin-top: 20px; background-color: #4CAF50; color: white; padding: 10px; border: none; cursor: pointer;">Generate All Matches</button>
 
-  <script type="module">
- 	
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+  <script type="module"> 
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCu8iaqsajlMWQtViX8Ej0A2nto3nJh6zA",
-  authDomain: "predictii-3654f.firebaseapp.com",
-  projectId: "predictii-3654f",
-  storageBucket: "predictii-3654f.firebasestorage.app",
-  messagingSenderId: "815792500960",
-  appId: "1:815792500960:web:5288066328f785ba1f2085"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyCu8iaqsajlMWQtViX8Ej0A2nto3nJh6zA",
+      authDomain: "predictii-3654f.firebaseapp.com",
+      projectId: "predictii-3654f",
+      storageBucket: "predictii-3654f.firebasestorage.app",
+      messagingSenderId: "815792500960",
+      appId: "1:815792500960:web:5288066328f785ba1f2085"
+    };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-// Verificăm dacă utilizatorul este logat
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    console.log("1. Utilizator detectat în Auth cu UID-ul:", user.uid);
+    // --- FUNCȚIA DE AFIȘARE MECIURI (PENTRU TOȚI) ---
+    async function afiseazaMeciuriGrupa(literaGrupei) {
+      const container = document.getElementById("meciuriContainer");
+      container.innerHTML = "<p>Se încarcă meciurile...</p>";
+      try {
+        const matchesRef = collection(db, "wc2026", "config", "matches");
+        const q = query(matchesRef, where("group", "==", literaGrupei));
+        const querySnapshot = await getDocs(q);
 
-    // --- LOGICA PENTRU TOȚI UTILIZATORII ---
-    const showMatchesBtn = document.getElementById("showMatchesBtn");
-    if (showMatchesBtn) {
-      console.log("2. Butonul 'showMatchesBtn' a fost găsit în HTML și este pregătit.");
-      
-      showMatchesBtn.onclick = () => {
-        const literaGrupei = document.getElementById("groupInput").value.trim().toUpperCase();
-        console.log("3. S-a apăsat butonul. Litera introdusă este:", literaGrupei);
-        
-        if (!literaGrupei) {
-          alert("Te rog să introduci o literă (A-L)!");
+        if (querySnapshot.empty) {
+          container.innerHTML = `<p style="color: red;">Nu s-au găsit meciuri generate pentru Grupa ${literaGrupei}.</p>`;
           return;
         }
-        
-        // Apelăm funcția care aduce meciurile
-        afiseazaMeciuriGrupa(literaGrupei);
-      };
-    } else {
-      console.error("EROARE: Nu există niciun element cu id='showMatchesBtn' în HTML!");
+
+        container.innerHTML = `<h4>Meciuri înregistrate în Grupa ${literaGrupei}:</h4>`;
+        querySnapshot.forEach((docSnap) => {
+          const meci = docSnap.data();
+          container.innerHTML += `
+            <div style="padding: 10px; margin-bottom: 8px; background: #eee; border-radius: 5px; display: flex; justify-content: space-between; max-width: 300px;">
+              <strong>${meci.home}</strong> 
+              <span>vs</span> 
+              <strong>${meci.away}</strong>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error("Eroare la preluarea meciurilor:", error);
+        container.innerHTML = "<p style="color: red;">A apărut o eroare la descărcarea datelor. Verifică regulile Firebase Firestore.</p>";
+      }
     }
 
-    // --- LOGICA REZISTENTĂ DOAR PENTRU ADMIN ---
-    try {
-      console.log("4. Încercăm să verificăm rolul în Firestore...");
-      const snap = await getDoc(doc(db, "users", user.uid));
-      
-      if (snap.exists()) {
-        const rula = snap.data().role;
-        console.log("5. Rolul găsit în baza de date pentru acest user este:", rula);
-        
-        if (rula === "admin") {
-          const genBtn = document.getElementById("genBtn");
-          if (genBtn) {
-            genBtn.style.display = "block";
-            // Folosim onclick simplu pentru a evita dublarea evenimentelor la multiple rulări
-            genBtn.onclick = generateAll12Groups;
-            console.log("6. Utilizatorul este admin. Butonul de generare a fost afișat.");
+    // --- FUNCȚIA AJUTĂTOARE DE GENERARE PENTRU O SINGURĂ GRUPĂ ---
+    async function generateMatchesForGroup(groupLetter) {
+      try {
+        const groupSnap = await getDoc(doc(db, "wc2026", "config", "groups", groupLetter));
+        if (!groupSnap.exists()) {
+          console.log(`⚠️ Grupa ${groupLetter} nu există în baza de date (wc2026/config/groups/${groupLetter}).`);
+          return;
+        }
+        const teams = groupSnap.data().teams;
+        if (!teams || teams.length !== 4) {
+          console.log(`⚠️ Grupa ${groupLetter} nu are exact 4 echipe în array-ul 'teams'.`);
+          return;
+        }
+
+        let matchCounter = 1;
+        for (let i = 0; i < teams.length; i++) {
+          for (let j = i + 1; j < teams.length; j++) {
+            const matchId = `${groupLetter}_meci_${matchCounter}`;
+            const matchData = {
+              id: matchId,
+              group: groupLetter,
+              home: teams[i],
+              away: teams[j],
+              status: "scheduled",
+              createdAt: new Date()
+            };
+            const matchDocRef = doc(db, "wc2026", "config", "matches", matchId);
+            await setDoc(matchDocRef, matchData);
+            matchCounter++;
           }
         }
-      } else {
-        console.log("5. Documentul utilizatorului nu există în colecția 'users'.");
+        console.log(`✅ Grupa ${groupLetter}: Toate cele 6 meciuri au fost generate!`);
+      } catch (error) {
+        console.error(`Eroare la generarea grupei ${groupLetter}:`, error);
       }
-    } catch (error) {
-      // Dacă utilizatorul nu are voie să își citească propriul profil din cauza regulilor Firebase,
-      // eroarea va fi prinsă aici, dar butonul de afișare meciuri va rămâne funcțional!
-      console.error("Eroare (probabil de permisiuni/reguli Firebase) la verificarea adminului:", error);
-    }
-    
-  } else {
-    console.log("Regret, dar niciun utilizator nu este conectat în Firebase Auth.");
-  }
-});
-
-// --- FUNCȚIA DE AFIȘARE MECIURI (PENTRU TOȚI) ---
-async function afiseazaMeciuriGrupa(literaGrupei) {
-  const container = document.getElementById("meciuriContainer");
-  container.innerHTML = "<p>Se încarcă meciurile...</p>";
-
-  try {
-    // Facem referință la sub-colecția unde adminul a salvat meciurile
-    const matchesRef = collection(db, "wc2026", "config", "matches");
-    
-    // Filtram meciurile unde câmpul 'group' este egal cu litera introdusă
-    const q = query(matchesRef, where("group", "==", literaGrupei));
-    const querySnapshot = await getDocs(q);
-
-    // Dacă nu s-a găsit niciun meci
-    if (querySnapshot.empty) {
-      container.innerHTML = `<p style="color: red;">Nu s-au găsit meciuri generate pentru Grupa ${literaGrupei}.</p>`;
-      return;
     }
 
-    // Ștergem textul de încărcare și pregătim lista
-    container.innerHTML = `<h4>Meciuri înregistrate în Grupa ${literaGrupei}:</h4>`;
-    
-    // Generăm vizual fiecare meci
-    querySnapshot.forEach((docSnap) => {
-      const meci = docSnap.data();
+    // --- FUNCȚIA PRINCIPALĂ DE GENERARE TOATE CELE 12 GRUPE (APELATĂ DE ADMIN) ---
+    async function generateAll12Groups() {
+      const grupe = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
+      alert("Generarea tuturor celor 12 grupe a început. Verifică consola din F12!");
       
-      container.innerHTML += `
-        <div style="padding: 10px; margin-bottom: 8px; background: #eee; border-radius: 5px; display: flex; justify-content: space-between; max-width: 300px;">
-          <strong>${meci.home}</strong> 
-          <span>vs</span> 
-          <strong>${meci.away}</strong>
-        </div>
-      `;
-    });
-
-  } catch (error) {
-    console.error("Eroare la preluarea meciurilor:", error);
-    container.innerHTML = "<p style="color: red;">A apărut o eroare la descărcarea datelor.</p>";
-  }
-}
-    
-// Apelare pentru o anumită grupă (ex: când adminul apasă un buton pentru Grupa A)
-// Sau poți face un loop de la A la L ca să le generezi pe toate deodată.
-async function generateMatchesForGroup(groupLetter) {
-  try {
-    // 1. Preluăm dinamic grupa selectată (A, B, C, etc.)
-    const groupSnap = await getDoc(doc(db, "wc2026", "config", "groups", groupLetter));
-    
-    if (!groupSnap.exists()) {
-      console.log(`Grupa ${groupLetter} nu există în baza de date.`);
-      return;
-    }
-
-    const teams = groupSnap.data().teams;
-    if (!teams || teams.length !== 4) {
-      console.log(`Grupa ${groupLetter} nu are exact 4 echipe.`);
-      return;
-    }
-
-    let matchCounter = 1;
-
-    // 2. Generăm cele 6 meciuri
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        
-        // Creăm un ID unic și logic: Ex pentru grupa A: "A_meci_1", "A_meci_2"...
-        const matchId = `${groupLetter}_meci_${matchCounter}`;
-        
-        const matchData = {
-          id: matchId,
-          group: groupLetter,
-          home: teams[i],
-          away: teams[j],
-          status: "scheduled", // adăugat pentru logica de joc ulterioară
-          createdAt: new Date()
-        };
-
-        // 3. Salvarea într-o sub-colecție curată numită 'meciuri'
-        const matchDocRef = doc(db, "wc2026", "config", "matches", matchId);
-        await setDoc(matchDocRef, matchData);
-        
-        matchCounter++;
+      for (const litera of grupe) {
+        await generateMatchesForGroup(litera);
       }
+      alert("Procesul de generare s-a încheiat!");
     }
-    console.log(`✅ Grupa ${groupLetter}: Toate cele 6 meciuri au fost generate!`);
 
-  } catch (error) {
-    console.error(`Eroare la generarea grupei ${groupLetter}:`, error);
-  }
-}
+    // --- MONITORIZAREA AUTENTIFICĂRII (Cea care pornește butoanele după ce se încarcă pagina) ---
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log("Jucător logat cu UID-ul:", user.uid);
 
-    // EXEMPLU DE UTILIZARE: 
-// Dacă vrei să generezi TOATE cele 12 grupe deodată la un singur click:
-async function generateAll12Groups() {
-  const grupe = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
-  
-  alert("Generarea tuturor celor 12 grupe a început. Verifică consola!");
-  for (const litera of grupe) {
-    await generateMatchesForGroup(litera);
-  }
-  alert("Toate meciurile pentru cele 12 grupe au fost generate cu succes!");
-}
+        // 1. Activare buton căutare pentru TOȚI utilizatorii
+        const showMatchesBtn = document.getElementById("showMatchesBtn");
+        if (showMatchesBtn) {
+          showMatchesBtn.onclick = () => {
+            const literaGrupei = document.getElementById("groupInput").value.trim().toUpperCase();
+            if (!literaGrupei) {
+              alert("Te rog să introduci o literă (A-L)!");
+              return;
+            }
+            afiseazaMeciuriGrupa(literaGrupei);
+          };
+        }
+
+        // 2. Verificare rol și activare buton doar pentru ADMIN
+        try {
+          const snap = await getDoc(doc(db, "users", user.uid));
+          if (snap.exists() && snap.data().role === "admin") {
+            console.log("Confirmare: Acest cont are rol de ADMIN.");
+            const genBtn = document.getElementById("genBtn");
+            if (genBtn) {
+              genBtn.style.display = "block";
+              // Folosim o funcție anonimă securizată la click pentru a evita problemele de hoisting
+              genBtn.onclick = () => { generateAll12Groups(); };
+            }
+          } else {
+            console.log("Jucătorul nu este admin. Butonul de generare rămâne ascuns.");
+          }
+        } catch (error) {
+          console.error("Eroare la citirea documentului de utilizator sau permisiuni:", error);
+        }
+      } else {
+        console.log("Nu există niciun utilizator logat în sesiune.");
+      }
+    });
   </script>
 </body>
 </html>
