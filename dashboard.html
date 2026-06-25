@@ -12,10 +12,10 @@
   <button id="genBtn" style="display: none;">Generate</button>
 
   <script type="module">
-    // 2. ASIGURĂ-TE CĂ AI IMPORTURILE ȘI CONFIGURAREA FIREBASE AICI (Exemplu pentru Firebase v9/v10+)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+ 	
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCu8iaqsajlMWQtViX8Ej0A2nto3nJh6zA",
@@ -26,37 +26,85 @@ const firebaseConfig = {
   appId: "1:815792500960:web:5288066328f785ba1f2085"
 };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    // 3. OBLIGATORIU: Folosește onAuthStateChanged! 
-    // Altfel, auth.currentUser va fi null în primele milisecunde de la încărcarea paginii.
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const uid = user.uid;
-        
-        try {
-          const snap = await getDoc(doc(db, "users", uid));
-          
-          if (snap.exists()) {
-            const userData = snap.data();
-            
-            // Verificăm rolul
-            if (userData.role === "admin") {
-              document.getElementById("genBtn").style.display = "block";
-            }
-          } else {
-            console.log("Utilizatorul nu are un profil creat în Firestore.");
-          }
-        } catch (error) {
-          console.error("Eroare la preluarea datelor:", error);
-        }
-      } else {
-        console.log("Utilizatorul nu este logat. Redirecționează-l către login.");
-        // window.location.href = "login.html";
+// Verificăm dacă utilizatorul este logat și dacă este admin
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (snap.exists() && snap.data().role === "admin") {
+        const genBtn = document.getElementById("genBtn");
+        genBtn.style.display = "block";
+
+        // Adăugăm evenimentul de click pe butonul de Generate
+        genBtn.addEventListener("click", generateGroupMatches);
       }
-    });
+    } catch (error) {
+      console.error("Eroare la verificarea permisiunilor:", error);
+    }
+  }
+});
+
+// Funcția principală care generează automat meciurile
+async function generateGroupMatches() {
+  try {
+    // 1. Preluăm cele 4 echipe din Firestore
+    const groupSnap = await getDoc(doc(db, "wc2026", "config", "groups", "A"));
+    
+    if (!groupSnap.exists()) {
+      alert("Nu s-a găsit configurația Grupei A în baza de date!");
+      return;
+    }
+
+    const groupData = groupSnap.data();
+    const teams = groupData.teams; // Acesta este array-ul tău cu cele 4 echipe
+
+    if (!teams || teams.length !== 4) {
+      alert("Grupa trebuie să aibă exact 4 echipe pentru a genera cele 6 meciuri!");
+      return;
+    }
+
+    alert("Se generează meciurile... Verifică consola browserului.");
+    
+    // 2. Algoritmul Round-Robin pentru 4 echipe (generează cele 6 meciuri unice)
+    let matchCounter = 1;
+    
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = i + 1; j < teams.length; j++) {
+        
+        // Stabilim Home și Away în mod dinamic
+        const homeTeam = teams[i];
+        const awayTeam = teams[j];
+
+        // Structura meciului exact cum ai cerut-o
+        const matchData = {
+          home: homeTeam,
+          away: awayTeam,
+          group: "A",
+          createdAt: new Date()
+        };
+
+        // 3. Salvarea în wc2026 -> config -> matches -> test
+        // Folosim un ID de tipul "meci_1", "meci_2" ca să nu se suprascrie între ele în interiorul folderului virtual 'test'
+        const matchDocRef = doc(db, "wc2026", "config", "matches", `test_meci_${matchCounter}`);
+        
+        await setDoc(matchDocRef, matchData);
+        console.log(`Salvat cu succes: ${homeTeam} vs ${awayTeam}`);
+        
+        matchCounter++;
+      }
+    }
+
+    alert("Toate cele 6 meciuri au fost generate cu succes în Firestore!");
+
+  } catch (error) {
+    console.error("Eroare la generarea meciurilor:", error);
+    alert("A apărut o eroare. Detalii în consolă.");
+  }
+}
   </script>
 </body>
 </html>
