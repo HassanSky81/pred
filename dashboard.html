@@ -38,15 +38,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Verificăm dacă utilizatorul este logat și dacă este admin
+// Verificăm dacă utilizatorul este logat
 onAuthStateChanged(auth, async (user) => {
- if (user) {
-    // 1. Logica pentru Butonul de Căutare (Valabil pentru TOȚI utilizatorii logați)
+  if (user) {
+    console.log("1. Utilizator detectat în Auth cu UID-ul:", user.uid);
+
+    // --- LOGICA PENTRU TOȚI UTILIZATORII ---
     const showMatchesBtn = document.getElementById("showMatchesBtn");
     if (showMatchesBtn) {
+      console.log("2. Butonul 'showMatchesBtn' a fost găsit în HTML și este pregătit.");
+      
       showMatchesBtn.onclick = () => {
-        // Luăm valoarea din input și o transformăm în literă mare
         const literaGrupei = document.getElementById("groupInput").value.trim().toUpperCase();
+        console.log("3. S-a apăsat butonul. Litera introdusă este:", literaGrupei);
         
         if (!literaGrupei) {
           alert("Te rog să introduci o literă (A-L)!");
@@ -56,21 +60,39 @@ onAuthStateChanged(auth, async (user) => {
         // Apelăm funcția care aduce meciurile
         afiseazaMeciuriGrupa(literaGrupei);
       };
+    } else {
+      console.error("EROARE: Nu există niciun element cu id='showMatchesBtn' în HTML!");
     }
 
-    // 2. Logica ta veche pentru butonul de generare (Doar pentru ADMIN)
+    // --- LOGICA REZISTENTĂ DOAR PENTRU ADMIN ---
     try {
+      console.log("4. Încercăm să verificăm rolul în Firestore...");
       const snap = await getDoc(doc(db, "users", user.uid));
-      if (snap.exists() && snap.data().role === "admin") {
-        const genBtn = document.getElementById("genBtn");
-        genBtn.style.display = "block";
-
-        // Adăugăm evenimentul de click pe butonul de Generate
-        genBtn.addEventListener("click", generateAll12Groups);
+      
+      if (snap.exists()) {
+        const rula = snap.data().role;
+        console.log("5. Rolul găsit în baza de date pentru acest user este:", rula);
+        
+        if (rula === "admin") {
+          const genBtn = document.getElementById("genBtn");
+          if (genBtn) {
+            genBtn.style.display = "block";
+            // Folosim onclick simplu pentru a evita dublarea evenimentelor la multiple rulări
+            genBtn.onclick = generateAll12Groups;
+            console.log("6. Utilizatorul este admin. Butonul de generare a fost afișat.");
+          }
+        }
+      } else {
+        console.log("5. Documentul utilizatorului nu există în colecția 'users'.");
       }
     } catch (error) {
-      console.error("Eroare la verificarea permisiunilor:", error);
+      // Dacă utilizatorul nu are voie să își citească propriul profil din cauza regulilor Firebase,
+      // eroarea va fi prinsă aici, dar butonul de afișare meciuri va rămâne funcțional!
+      console.error("Eroare (probabil de permisiuni/reguli Firebase) la verificarea adminului:", error);
     }
+    
+  } else {
+    console.log("Regret, dar niciun utilizator nu este conectat în Firebase Auth.");
   }
 });
 
