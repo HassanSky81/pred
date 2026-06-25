@@ -5,18 +5,53 @@
 </head>
 <body>
 
-<h1>🏆 Bine ai venit la pronosticuri!</h1>
+  <h1>🏆 Bine ai venit la pronosticuri!</h1>
+  <p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
 
-<p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
-<script type="module">
-const uid = auth.currentUser.uid;
+  <!-- 1. BUTONUL LIPSEA DIN HTML. Îl punem aici și îl ascundem implicit cu style="display: none;" -->
+  <button id="genBtn" style="display: none;">Generate</button>
 
-const snap = await getDoc(doc(db, "users", uid));
-const userData = snap.data();
+  <script type="module">
+    // 2. ASIGURĂ-TE CĂ AI IMPORTURILE ȘI CONFIGURAREA FIREBASE AICI (Exemplu pentru Firebase v9/v10+)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
-if (userData.role === "admin") {
-  document.getElementById("genBtn").style.display = "block";
-}
-</script>
+    const firebaseConfig = {
+      // Pune aici obiectul tău de configurare de la Firebase
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // 3. OBLIGATORIU: Folosește onAuthStateChanged! 
+    // Altfel, auth.currentUser va fi null în primele milisecunde de la încărcarea paginii.
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const uid = user.uid;
+        
+        try {
+          const snap = await getDoc(doc(db, "users", uid));
+          
+          if (snap.exists()) {
+            const userData = snap.data();
+            
+            // Verificăm rolul
+            if (userData.role === "admin") {
+              document.getElementById("genBtn").style.display = "block";
+            }
+          } else {
+            console.log("Utilizatorul nu are un profil creat în Firestore.");
+          }
+        } catch (error) {
+          console.error("Eroare la preluarea datelor:", error);
+        }
+      } else {
+        console.log("Utilizatorul nu este logat. Redirecționează-l către login.");
+        // window.location.href = "login.html";
+      }
+    });
+  </script>
 </body>
 </html>
