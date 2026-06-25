@@ -17,9 +17,14 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      // Pune aici obiectul tău de configurare de la Firebase
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyCu8iaqsajlMWQtViX8Ej0A2nto3nJh6zA",
+  authDomain: "predictii-3654f.firebaseapp.com",
+  projectId: "predictii-3654f",
+  storageBucket: "predictii-3654f.firebasestorage.app",
+  messagingSenderId: "815792500960",
+  appId: "1:815792500960:web:5288066328f785ba1f2085"
+};
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
