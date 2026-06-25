@@ -40,7 +40,7 @@ onAuthStateChanged(auth, async (user) => {
         genBtn.style.display = "block";
 
         // Adăugăm evenimentul de click pe butonul de Generate
-        genBtn.addEventListener("click", generateGroupMatches);
+        genBtn.addEventListener("click", generateAll12Groups);
       }
     } catch (error) {
       console.error("Eroare la verificarea permisiunilor:", error);
@@ -48,62 +48,66 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// Funcția principală care generează automat meciurile
-async function generateGroupMatches() {
+// Apelare pentru o anumită grupă (ex: când adminul apasă un buton pentru Grupa A)
+// Sau poți face un loop de la A la L ca să le generezi pe toate deodată.
+async function generateMatchesForGroup(groupLetter) {
   try {
-    // 1. Preluăm cele 4 echipe din Firestore
-    const groupSnap = await getDoc(doc(db, "wc2026", "config", "groups", "A"));
+    // 1. Preluăm dinamic grupa selectată (A, B, C, etc.)
+    const groupSnap = await getDoc(doc(db, "wc2026", "config", "groups", groupLetter));
     
     if (!groupSnap.exists()) {
-      alert("Nu s-a găsit configurația Grupei A în baza de date!");
+      console.log(`Grupa ${groupLetter} nu există în baza de date.`);
       return;
     }
 
-    const groupData = groupSnap.data();
-    const teams = groupData.teams; // Acesta este array-ul tău cu cele 4 echipe
-
+    const teams = groupSnap.data().teams;
     if (!teams || teams.length !== 4) {
-      alert("Grupa trebuie să aibă exact 4 echipe pentru a genera cele 6 meciuri!");
+      console.log(`Grupa ${groupLetter} nu are exact 4 echipe.`);
       return;
     }
 
-    alert("Se generează meciurile... Verifică consola browserului.");
-    
-    // 2. Algoritmul Round-Robin pentru 4 echipe (generează cele 6 meciuri unice)
     let matchCounter = 1;
-    
+
+    // 2. Generăm cele 6 meciuri
     for (let i = 0; i < teams.length; i++) {
       for (let j = i + 1; j < teams.length; j++) {
         
-        // Stabilim Home și Away în mod dinamic
-        const homeTeam = teams[i];
-        const awayTeam = teams[j];
-
-        // Structura meciului exact cum ai cerut-o
+        // Creăm un ID unic și logic: Ex pentru grupa A: "A_meci_1", "A_meci_2"...
+        const matchId = `${groupLetter}_meci_${matchCounter}`;
+        
         const matchData = {
-          home: homeTeam,
-          away: awayTeam,
-          group: "A",
+          id: matchId,
+          group: groupLetter,
+          home: teams[i],
+          away: teams[j],
+          status: "scheduled", // adăugat pentru logica de joc ulterioară
           createdAt: new Date()
         };
 
-        // 3. Salvarea în wc2026 -> config -> matches -> test
-        // Folosim un ID de tipul "meci_1", "meci_2" ca să nu se suprascrie între ele în interiorul folderului virtual 'test'
-        const matchDocRef = doc(db, "wc2026", "config", "matches", `test_meci_${matchCounter}`);
-        
+        // 3. Salvarea într-o sub-colecție curată numită 'meciuri'
+        const matchDocRef = doc(db, "wc2026", "config", "matches", matchId);
         await setDoc(matchDocRef, matchData);
-        console.log(`Salvat cu succes: ${homeTeam} vs ${awayTeam}`);
         
         matchCounter++;
       }
     }
-
-    alert("Toate cele 6 meciuri au fost generate cu succes în Firestore!");
+    console.log(`✅ Grupa ${groupLetter}: Toate cele 6 meciuri au fost generate!`);
 
   } catch (error) {
-    console.error("Eroare la generarea meciurilor:", error);
-    alert("A apărut o eroare. Detalii în consolă.");
+    console.error(`Eroare la generarea grupei ${groupLetter}:`, error);
   }
+}
+
+    // EXEMPLU DE UTILIZARE: 
+// Dacă vrei să generezi TOATE cele 12 grupe deodată la un singur click:
+async function generateAll12Groups() {
+  const grupe = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
+  
+  alert("Generarea tuturor celor 12 grupe a început. Verifică consola!");
+  for (const litera of grupe) {
+    await generateMatchesForGroup(litera);
+  }
+  alert("Toate meciurile pentru cele 12 grupe au fost generate cu succes!");
 }
   </script>
 </body>
