@@ -1,9 +1,61 @@
-<script type="module"> 
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Pronosticuri</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f9;
+    }
+    .container-cautare {
+      margin-top: 30px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      background-color: #ffffff;
+      border-radius: 8px;
+      max-width: 400px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
+      font-size: 16px;
+    }
+    .meci-card {
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #eee;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏆 Bine ai venit la pronosticuri1!</h1>
+  <p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
+
+  <div class="container-cautare">
+    <h3>🔍 Caută meciurile dintr-o grupă</h3>
+    <label for="groupInput">Introdu litera grupei (A-L):</label><br>
+    <input type="text" id="groupInput" placeholder="Ex: A" maxlength="1" style="text-transform: uppercase; width: 60px; text-align: center;"><br>
+    <button id="showMatchesBtn">Afișează meciuri</button>
+    
+    <div id="meciuriContainer" style="margin-top: 20px;"></div>
+  </div>
+
+  <button id="genBtn" style="display: none; margin-top: 20px; background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+    Generate All Matches
+  </button>
+
+  <script type="module"> 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
-    // 1. CONFIGURARE CORECTĂ
     const firebaseConfig = {
       apiKey: "AIzaSyCu8iaqsajlMWQtViX8Ej0A2nto3nJh6zA",
       authDomain: "predictii-3654f.firebaseapp.com",
@@ -17,7 +69,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // 2. FUNCȚIA PENTRU AFIȘARE MECIURI
+    // Funcția pentru afișare meciuri
     window.afiseazaMeciuriGrupa = async function(literaGrupei) {
       const container = document.getElementById("meciuriContainer");
       if (!container) return;
@@ -33,11 +85,11 @@
           return;
         }
 
-        container.innerHTML = `<h4>Meciuri123 înregistrate în Grupa ${literaGrupei}:</h4>`;
+        container.innerHTML = `<h4>Meciuri înregistrate în Grupa ${literaGrupei}:</h4>`;
         querySnapshot.forEach((docSnap) => {
           const meci = docSnap.data();
           container.innerHTML += `
-            <div style="padding: 10px; margin-bottom: 8px; background: #eee; border-radius: 5px; display: flex; justify-content: space-between; max-width: 300px;">
+            <div class="meci-card">
               <strong>${meci.home}</strong> 
               <span>vs</span> 
               <strong>${meci.away}</strong>
@@ -50,7 +102,7 @@
       }
     };
 
-    // 3. FUNCȚIA AJUTĂTOARE GENERARE MECIURI PENTRU O GRUPĂ
+    // Funcția ajutătoare pentru generarea unei grupe
     async function generateMatchesForGroup(groupLetter) {
       try {
         const groupSnap = await getDoc(doc(db, "wc2026", "config", "groups", groupLetter));
@@ -82,13 +134,12 @@
             matchCounter++;
           }
         }
-        console.log(`Meciuri generate pentru grupa ${groupLetter}`);
       } catch (error) {
         console.error("Eroare la generare grupă:", error);
       }
     }
 
-    // 4. FUNCȚIA PRINCIPALĂ DE GENERARE TOATE CELE 12 GRUPE
+    // Funcția principală de generare toate cele 12 grupe
     window.generateAll12Groups = async function() {
       alert("Generarea tuturor celor 12 grupe a început!");
       const grupe = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
@@ -98,25 +149,25 @@
       alert("Toate meciurile au fost generate!");
     };
 
-    // 5. ASCULTĂTORUL DE AUTH (AICI ERA PROBLEMA - ACUM E CURAT ȘI PUS LA FINAL)
+    // Ascultătorul de stare Auth
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        console.log("Utilizator logat:", user.uid);
+        console.log("Utilizator logat cu succes:", user.uid);
 
-        // Activăm butonul de căutare pentru toată lumea
+        // Activăm butonul de căutare
         const showMatchesBtn = document.getElementById("showMatchesBtn");
         if (showMatchesBtn) {
           showMatchesBtn.onclick = () => {
             const literaGrupei = document.getElementById("groupInput").value.trim().toUpperCase();
             if (!literaGrupei) {
-              alert("Te rog să introduci o literă (A-L)!");
+              alert("Te rog să introduci o lită (A-L)!");
               return;
             }
             window.afiseazaMeciuriGrupa(literaGrupei);
           };
         }
 
-        // Verificăm dacă este admin ca să îi arătăm butonul de generare
+        // Verificăm dacă este admin pentru butonul de generare
         try {
           const snap = await getDoc(doc(db, "users", user.uid));
           if (snap.exists() && snap.data().role === "admin") {
@@ -127,10 +178,12 @@
             }
           }
         } catch (error) {
-          console.error("Eroare la verificarea rolului de admin:", error);
+          console.error("Eroare la verificarea rolului:", error);
         }
       } else {
         console.log("Niciun utilizator logat.");
       }
     });
   </script>
+</body>
+</html>
