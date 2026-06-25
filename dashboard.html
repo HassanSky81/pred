@@ -1,29 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Dashboard</title>
-</head>
-<body>
-
-  <h1>🏆 Bine ai venit la pronosticuri1!</h1>
-  <p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
-
-  <h3>🔍 Caută meciurile dintr-o grupă</h3>
-  
-  <label for="groupInput">Introdu litera grupei (A-L):</label>
-  <input type="text" id="groupInput" placeholder="Ex: A" maxlength="1" style="text-transform: uppercase; width: 50px; text-align: center;">
-  
-  <button id="showMatchesBtn">Afișează meciuri</button>
-  
-  <div id="meciuriContainer" style="margin-top: 20px;"></div>
-
-  <button id="genBtn" style="display: none; margin-top: 20px; background-color: #4CAF50; color: white; padding: 10px; border: none; cursor: pointer;">Generate All Matches</button>
-
-  <script type="module"> 
+<script type="module"> 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
+    // 1. CONFIGURARE CORECTĂ
     const firebaseConfig = {
       apiKey: "AIzaSyCu8iaqsajlMWQtViX8Ej0A2nto3nJh6zA",
       authDomain: "predictii-3654f.firebaseapp.com",
@@ -37,8 +17,8 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // --- FUNCȚIA DE AFIȘARE MECIURI (PENTRU TOȚI) ---
-    async function afiseazaMeciuriGrupa(literaGrupei) {
+    // 2. FUNCȚIA PENTRU AFIȘARE MECIURI
+    window.afiseazaMeciuriGrupa = async function(literaGrupei) {
       const container = document.getElementById("meciuriContainer");
       if (!container) return;
       
@@ -53,7 +33,7 @@
           return;
         }
 
-        container.innerHTML = `<h4>Meciuri înregistrate în Grupa ${literaGrupei}:</h4>`;
+        container.innerHTML = `<h4>Meciuri123 înregistrate în Grupa ${literaGrupei}:</h4>`;
         querySnapshot.forEach((docSnap) => {
           const meci = docSnap.data();
           container.innerHTML += `
@@ -66,18 +46,24 @@
         });
       } catch (error) {
         console.error("Eroare la preluarea meciurilor:", error);
-        container.innerHTML = "<p style="color: red;">Eroare la descărcarea datelor.</p>";
+        container.innerHTML = `<p style="color: red;">Eroare la descărcare: ${error.message}</p>`;
       }
-    }
+    };
 
-    // --- FUNCȚIA DE GENERARE PENTRU O GRUPĂ ---
+    // 3. FUNCȚIA AJUTĂTOARE GENERARE MECIURI PENTRU O GRUPĂ
     async function generateMatchesForGroup(groupLetter) {
       try {
         const groupSnap = await getDoc(doc(db, "wc2026", "config", "groups", groupLetter));
-        if (!groupSnap.exists()) return;
+        if (!groupSnap.exists()) {
+          console.log(`Grupa ${groupLetter} nu are configurare în Firestore.`);
+          return;
+        }
         
         const teams = groupSnap.data().teams;
-        if (!teams || teams.length !== 4) return;
+        if (!teams || teams.length !== 4) {
+          console.log(`Grupa ${groupLetter} nu are exact 4 echipe.`);
+          return;
+        }
 
         let matchCounter = 1;
         for (let i = 0; i < teams.length; i++) {
@@ -96,25 +82,28 @@
             matchCounter++;
           }
         }
+        console.log(`Meciuri generate pentru grupa ${groupLetter}`);
       } catch (error) {
         console.error("Eroare la generare grupă:", error);
       }
     }
 
-    // --- FUNCȚIA DE GENERARE TOATE GRUPELE ---
-    async function generateAll12Groups() {
-      const grupe = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
+    // 4. FUNCȚIA PRINCIPALĂ DE GENERARE TOATE CELE 12 GRUPE
+    window.generateAll12Groups = async function() {
       alert("Generarea tuturor celor 12 grupe a început!");
+      const grupe = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
       for (const litera of grupe) {
         await generateMatchesForGroup(litera);
       }
       alert("Toate meciurile au fost generate!");
-    }
+    };
 
-    // --- ASCULTĂTORUL DE AUTH (PORNEȘTE LOGICA PAGINII) ---
+    // 5. ASCULTĂTORUL DE AUTH (AICI ERA PROBLEMA - ACUM E CURAT ȘI PUS LA FINAL)
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Activare buton căutare pentru TOȚI utilizatorii
+        console.log("Utilizator logat:", user.uid);
+
+        // Activăm butonul de căutare pentru toată lumea
         const showMatchesBtn = document.getElementById("showMatchesBtn");
         if (showMatchesBtn) {
           showMatchesBtn.onclick = () => {
@@ -123,27 +112,25 @@
               alert("Te rog să introduci o literă (A-L)!");
               return;
             }
-            afiseazaMeciuriGrupa(literaGrupei);
+            window.afiseazaMeciuriGrupa(literaGrupei);
           };
         }
 
-        // Verificare ADMIN
+        // Verificăm dacă este admin ca să îi arătăm butonul de generare
         try {
           const snap = await getDoc(doc(db, "users", user.uid));
           if (snap.exists() && snap.data().role === "admin") {
             const genBtn = document.getElementById("genBtn");
             if (genBtn) {
               genBtn.style.display = "block";
-              genBtn.onclick = () => { generateAll12Groups(); };
+              genBtn.onclick = () => { window.generateAll12Groups(); };
             }
           }
         } catch (error) {
-          console.error("Eroare la verificarea rolului:", error);
+          console.error("Eroare la verificarea rolului de admin:", error);
         }
       } else {
-        console.log("Utilizator nelogat.");
+        console.log("Niciun utilizator logat.");
       }
     });
   </script>
-</body>
-</html>
