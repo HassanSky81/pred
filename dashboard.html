@@ -8,6 +8,15 @@
 <h1>🏆 Bine ai venit la pronosticuri!</h1>
 
 <p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
+<script type="module">
+const uid = auth.currentUser.uid;
 
+const snap = await getDoc(doc(db, "users", uid));
+const userData = snap.data();
+
+if (userData.role === "admin") {
+  document.getElementById("genBtn").style.display = "block";
+}
+</script>
 </body>
 </html>
