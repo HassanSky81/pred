@@ -5,8 +5,16 @@
 </head>
 <body>
 
-  <h1>🏆 Bine ai venit la pronosticuri123!</h1>
+  <h1>🏆 Bine ai venit la pronosticuri!</h1>
   <p>Aici va fi jocul tău (meciuri + pronosticuri).</p>
+  <h3>🔍 Caută meciurile dintr-o grupă</h3>
+  
+  <label for="groupInput">Introdu litera grupei (A-L):</label>
+  <input type="text" id="groupInput" placeholder="Ex: A" maxlength="1" style="text-transform: uppercase; width: 50px; text-align: center;">
+  
+  <button id="showMatchesBtn">Afișează meciuri</button>
+
+  <div id="meciuriContainer" style="margin-top: 20px;"></div>
 
   <!-- 1. BUTONUL LIPSEA DIN HTML. Îl punem aici și îl ascundem implicit cu style="display: none;" -->
   <button id="genBtn" style="display: none;">Generate</button>
@@ -15,7 +23,7 @@
  	
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCu8iaqsajlMWQtViX8Ej0A2nto3nJh6zA",
@@ -32,7 +40,25 @@ const db = getFirestore(app);
 
 // Verificăm dacă utilizatorul este logat și dacă este admin
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
+ if (user) {
+    // 1. Logica pentru Butonul de Căutare (Valabil pentru TOȚI utilizatorii logați)
+    const showMatchesBtn = document.getElementById("showMatchesBtn");
+    if (showMatchesBtn) {
+      showMatchesBtn.onclick = () => {
+        // Luăm valoarea din input și o transformăm în literă mare
+        const literaGrupei = document.getElementById("groupInput").value.trim().toUpperCase();
+        
+        if (!literaGrupei) {
+          alert("Te rog să introduci o literă (A-L)!");
+          return;
+        }
+        
+        // Apelăm funcția care aduce meciurile
+        afiseazaMeciuriGrupa(literaGrupei);
+      };
+    }
+
+    // 2. Logica ta veche pentru butonul de generare (Doar pentru ADMIN)
     try {
       const snap = await getDoc(doc(db, "users", user.uid));
       if (snap.exists() && snap.data().role === "admin") {
@@ -48,6 +74,47 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+// --- FUNCȚIA DE AFIȘARE MECIURI (PENTRU TOȚI) ---
+async function afiseazaMeciuriGrupa(literaGrupei) {
+  const container = document.getElementById("meciuriContainer");
+  container.innerHTML = "<p>Se încarcă meciurile...</p>";
+
+  try {
+    // Facem referință la sub-colecția unde adminul a salvat meciurile
+    const matchesRef = collection(db, "wc2026", "config", "matches");
+    
+    // Filtram meciurile unde câmpul 'group' este egal cu litera introdusă
+    const q = query(matchesRef, where("group", "==", literaGrupei));
+    const querySnapshot = await getDocs(q);
+
+    // Dacă nu s-a găsit niciun meci
+    if (querySnapshot.empty) {
+      container.innerHTML = `<p style="color: red;">Nu s-au găsit meciuri generate pentru Grupa ${literaGrupei}.</p>`;
+      return;
+    }
+
+    // Ștergem textul de încărcare și pregătim lista
+    container.innerHTML = `<h4>Meciuri înregistrate în Grupa ${literaGrupei}:</h4>`;
+    
+    // Generăm vizual fiecare meci
+    querySnapshot.forEach((docSnap) => {
+      const meci = docSnap.data();
+      
+      container.innerHTML += `
+        <div style="padding: 10px; margin-bottom: 8px; background: #eee; border-radius: 5px; display: flex; justify-content: space-between; max-width: 300px;">
+          <strong>${meci.home}</strong> 
+          <span>vs</span> 
+          <strong>${meci.away}</strong>
+        </div>
+      `;
+    });
+
+  } catch (error) {
+    console.error("Eroare la preluarea meciurilor:", error);
+    container.innerHTML = "<p style="color: red;">A apărut o eroare la descărcarea datelor.</p>";
+  }
+}
+    
 // Apelare pentru o anumită grupă (ex: când adminul apasă un buton pentru Grupa A)
 // Sau poți face un loop de la A la L ca să le generezi pe toate deodată.
 async function generateMatchesForGroup(groupLetter) {
