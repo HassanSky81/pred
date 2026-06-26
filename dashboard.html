@@ -50,6 +50,7 @@
   <button id="genBtn" style="display: none; margin-top: 20px; background-color: #4CAF50; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
     Generate All Matches
   </button>
+  <button id="addNewField" style="display: none;"> AdaugaCampNou </button>
 
   <script type="module"> 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
@@ -101,6 +102,43 @@
         container.innerHTML = `<p style="color: red;">Eroare la descărcare: ${error.message}</p>`;
       }
     };
+	
+	//functia pentru adaugare un camp nou
+	async function adaugaCampNou(){
+	
+		try {
+		// 1. Obținem referința către subcolecția ta specifică
+		const matchesCollectionRef = collection(db, "wc2026", "config", "matches");
+		
+		// 2. Citim toate documentele din această colecție
+		const querySnapshot = await getDocs(matchesCollectionRef);
+		
+		if (querySnapshot.empty) {
+		  console.log("Nu s-au găsit meciuri în această colecție.");
+		  return;
+		}
+
+		console.log(`Am găsit ${querySnapshot.size} meciuri. Începe actualizarea...`);
+
+		// 3. Parcurgem fiecare meci și îi adăugăm câmpul nou "Date"
+		const promises = querySnapshot.docs.map((document) => {
+		  const matchDocRef = doc(db, "wc2026", "config", "matches", document.id);
+		  
+		  // Aici poți pune o valoare text, timestamp sau un obiect cu data meciului
+		  return updateDoc(matchDocRef, {
+			Date: "2026-06-26" // Înlocuiește cu valoarea dorită pentru meci
+		  });
+		});
+
+		// 4. Așteptăm ca toate documentele să fie actualizate în paralel
+		await Promise.all(promises);
+		
+		console.log("✅ Toate meciurile au fost actualizate cu succes cu noul câmp 'Date'!");
+	  } catch (error) {
+		console.error("Eroare la actualizarea documentelor: ", error);
+	  }
+    
+	};
 
     // Funcția ajutătoare pentru generarea unei grupe
     async function generateMatchesForGroup(groupLetter) {
@@ -172,9 +210,14 @@
           const snap = await getDoc(doc(db, "users", user.uid));
           if (snap.exists() && snap.data().role === "admin") {
             const genBtn = document.getElementById("genBtn");
+			const addNewField = document.getElementById("addNewField");			
             if (genBtn) {
               genBtn.style.display = "block";
               genBtn.onclick = () => { window.generateAll12Groups(); };
+            }
+			if (addNewField) {
+              addNewField.style.display = "block";
+              addNewField.onclick = () => { window.adaugaCampNou(); };
             }
           }
         } catch (error) {
